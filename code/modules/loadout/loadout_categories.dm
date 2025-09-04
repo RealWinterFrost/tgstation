@@ -16,6 +16,8 @@
 	var/type_to_generate
 	/// List of all loadout items in this category
 	VAR_FINAL/list/datum/loadout_item/associated_items
+	/// How many of this specific category is allowed?
+	var/max_allowed = 1
 
 /datum/loadout_category/New()
 	. = ..()
@@ -24,6 +26,7 @@
 		if(GLOB.all_loadout_datums[item.item_path])
 			stack_trace("Loadout datum collision - [item.item_path] is shared between multiple loadout datums.")
 		GLOB.all_loadout_datums[item.item_path] = item
+	category_info = "([max_allowed] allowed)"
 
 /datum/loadout_category/Destroy(force, ...)
 	if(!force)
@@ -75,5 +78,17 @@
 	datum/loadout_item/added_item,
 	list/datum/loadout_item/all_loadout_items,
 )
-	manager.deselect_item(conflicting_item)
+	if(max_allowed == 1) // can replace 1 with the define
+		manager.deselect_item(conflicting_item)
+	var/list/datum/loadout_item/other_loadout_items = list()
+
+	for(var/datum/loadout_item/other_loadout_item in all_loadout_items)
+		if(other_loadout_item.category != src)
+			continue
+		other_loadout_items += other_loadout_item
+
+	if(length(other_loadout_items) >= max_allowed)
+		// We only need to deselect something if we're above the limit
+		// (And if we are we prioritize the first item found, FIFO)
+		manager.deselect_item(other_loadout_items[1])
 	return TRUE
